@@ -1,0 +1,6 @@
+node_modules/
+data/uploads/
+data/jobs/
+test/_*
+*.log
+.DS_Store

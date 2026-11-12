@@ -1,0 +1,17 @@
+{
+  "name": "cad-translator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CAD 图纸中译英：词库优先 + API 兜底，译文原地写回 DWG",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/core.test.js && node test/cad.test.js && node test/export.test.js",
+    "setup": "python scripts/patch-acadts.py .",
+    "postinstall": "node scripts/postinstall.mjs"
+  },
+  "dependencies": {
+    "@node-projects/acad-ts": "^3.8.0",
+    "iconv-lite": "^0.7.3"
+  }
+}

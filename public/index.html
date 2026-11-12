@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图译 · CAD 术语翻译</title>
+<meta name="description" content="中文工程图纸文字翻成英文：词库优先，词库没有的术语由 API 翻译并询问是否入库。">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/mark.svg">
+</head>
+<body>
+
+<header class="title-block">
+  <div class="tb-id">
+    <img class="mark" src="/mark.svg" alt="" width="34" height="34">
+    <div>
+      <h1>图译</h1>
+      <p class="tb-sub">中文 → English · 图纸文字翻译</p>
+    </div>
+  </div>
+  <dl class="tb-cells">
+    <div class="cell">
+      <dt>词条</dt>
+      <dd id="statTerms" class="num">—</dd>
+    </div>
+    <div class="cell">
+      <dt>引擎</dt>
+      <dd id="statEngine">—</dd>
+    </div>
+    <div class="cell">
+      <dt>本次命中</dt>
+      <dd id="statHits" class="num">—</dd>
+    </div>
+  </dl>
+</header>
+
+<main class="board">
+
+  <aside class="rail" aria-label="词库">
+    <div class="rail-head">
+      <h2>词库</h2>
+      <span class="count num" id="termCount">—</span>
+    </div>
+
+    <div class="drop" id="drop">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 12.5V3.5M5.5 7 9 3.5 12.5 7"/><path d="M3 11.5v2A1.5 1.5 0 0 0 4.5 15h9a1.5 1.5 0 0 0 1.5-1.5v-2"/>
+      </svg>
+      <p>把 CSV / TSV 拖到这里，或 <button type="button" class="link" id="pickGlossary">选择文件</button></p>
+      <p class="hint">每行 <code>中文,English</code>，可带表头；同名条目会被覆盖</p>
+      <input type="file" id="glossaryFile" accept=".csv,.tsv,.txt" hidden>
+    </div>
+
+    <form class="term-form" id="termForm">
+      <input name="zh" placeholder="中文" autocomplete="off" required>
+      <input name="en" placeholder="English" autocomplete="off" required>
+      <button type="submit" class="solid">加入</button>
+    </form>
+
+    <div class="term-search">
+      <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <circle cx="7" cy="7" r="4.2"/><path d="m10.4 10.4 3 3"/>
+      </svg>
+      <input id="termQuery" type="search" placeholder="搜索中文或英文" autocomplete="off">
+    </div>
+
+    <ul class="terms" id="termList"></ul>
+
+    <div class="rail-foot">
+      <a class="link" href="/api/glossary/export" download="glossary.csv">导出 CSV</a>
+      <button type="button" class="link danger" id="clearGlossary">清空词库</button>
+    </div>
+  </aside>
+
+  <section class="work">
+
+    <section class="pane pane-in">
+      <div class="pane-head">
+        <h2>原文</h2>
+        <div class="pane-tools">
+          <span class="meta num" id="srcMeta">0 行</span>
+          <button type="button" class="ghost" id="pickSource">
+            <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 1.8H4.3A1.3 1.3 0 0 0 3 3.1v9.8a1.3 1.3 0 0 0 1.3 1.3h7.4a1.3 1.3 0 0 0 1.3-1.3V5.5z"/>
+              <path d="M9 1.8v3.7h3.9"/>
+            </svg>
+            导入
+          </button>
+          <button type="button" class="ghost" id="sample">示例</button>
+          <input type="file" id="sourceFile" accept=".dwg,.dxf,.txt,.csv,.md" hidden>
+        </div>
+      </div>
+      <textarea id="source" spellcheck="false" placeholder="每行一段，直接粘贴图纸文字&#10;例：底板采用Q235钢板，未注倒角C1"></textarea>
+      <div class="pane-foot">
+        <p class="notice" id="notice" role="status" aria-live="polite"></p>
+        <button type="button" class="primary" id="run">
+          <span class="label">翻译</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="pane pane-out">
+      <div class="pane-head">
+        <h2>译文</h2>
+        <div class="pane-tools">
+          <button type="button" class="ghost" id="exportDwg" disabled title="把译文写回原图，导出「原名-EN.dwg」；几何、图层、块都不动">导出 DWG</button>
+          <button type="button" class="ghost" id="copyAll" disabled>复制全部</button>
+          <button type="button" class="ghost" id="downloadCsv" disabled>下载 CSV</button>
+        </div>
+      </div>
+
+      <div class="rows" id="rows"></div>
+
+      <div class="empty" id="empty">
+        <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="10.5" y="6.5" width="51" height="59" rx="1.5"/>
+          <path d="M10.5 18.5h51M10.5 46.5h51M10.5 56.5h51M24.5 46.5v19M47.5 46.5v19"/>
+          <path d="M17 26.5h37M17 32.5h26M17 38.5h31"/>
+        </svg>
+        <p>译文会按行排在这里</p>
+        <p class="hint">先在左栏导入你的词库，命中词库的术语不会被改写，编号气球标出它来自哪一条。</p>
+      </div>
+
+      <div class="cand-bar" id="candBar" hidden>
+        <div class="cand-head">
+          <p><strong id="candCount">0</strong> 个术语由 API 新译出，词库还没有</p>
+          <div class="cand-actions">
+            <button type="button" class="solid small" id="addAllCands">全部加入词库</button>
+            <button type="button" class="link" id="dismissCands">忽略</button>
+          </div>
+        </div>
+        <ul class="cand-list" id="candList"></ul>
+      </div>
+    </section>
+
+  </section>
+</main>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>
