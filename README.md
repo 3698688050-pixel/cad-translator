@@ -80,4 +80,15 @@ node test/export.test.js      # 占位符写回 / 字宽锚点 / 压线 / 真实
 
 ## 许可
 
-代码本身未授权。运行时依赖 `@node-projects/acad-ts` 为 **GPL-3.0**；若对外分发（含部署成公开服务），整个作品需按 GPL-3.0 开源。
+**GPL-3.0**（见 `LICENSE`）。依赖 `@node-projects/acad-ts` 为 GPL-3.0，故本项目整体按 GPL-3.0 发布：可自由使用、修改、分发，衍生作品同样需以 GPL-3.0 开源并提供源码。
+
+## 别人怎么用
+
+```bash
+git clone https://github.com/3698688050-pixel/cad-translator.git
+cd cad-translator
+npm install      # 首次会尝试给 acad-ts 打 GBK 补丁，需 python3
+DEEPSEEK_API_KEY=sk-... npm start
+```
+
+没有 python 就在服务启动后手动跑 `npm run setup`；不打这个补丁，导出时中文会被写成 `?`（服务启动时会告警）。

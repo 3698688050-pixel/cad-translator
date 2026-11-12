@@ -1,7 +1,8 @@
 {
   "name": "cad-translator",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
+  "license": "GPL-3.0-only",
   "type": "module",
   "description": "CAD 图纸中译英：词库优先 + API 兜底，译文原地写回 DWG",
   "scripts": {
