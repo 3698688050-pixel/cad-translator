@@ -37,7 +37,8 @@ if (!base) {
   }
 }
 
-const newTree = await api(`/repos/${REPO}/git/trees`, { method: 'POST', body: JSON.stringify({ tree, base_tree: base || undefined }) });
+// No base_tree on purpose: the tree must mirror `git ls-files` exactly, so deleted files really disappear.
+const newTree = await api(`/repos/${REPO}/git/trees`, { method: 'POST', body: JSON.stringify({ tree }) });
 const message = execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trim() || 'update';
 const author = { name: '3698688050-pixel', email: '346747232+3698688050-pixel@users.noreply.github.com' };
 const commit = await api(`/repos/${REPO}/git/commits`, { method: 'POST', body: JSON.stringify({ message, tree: newTree.sha, parents: base ? [base] : [], author }) });
