@@ -433,7 +433,7 @@ server.listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`图译 running at http://localhost:${PORT}`);
   console.log(`词库: ${STORE} (${Object.keys(glossary).length} 条)`);
   if (!gbkPatched()) {
-    console.log('⚠ acad-ts 未打 GBK 补丁，导出 DWG 时中文会变成 ? —— 先跑 python scripts/patch-acadts.py .');
+    console.log('⚠ acad-ts 未打 GBK 补丁，导出 DWG 时中文会变成 ? —— 先跑 npm run setup');
   }
   console.log(
     API_KEY

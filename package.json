@@ -8,8 +8,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node test/core.test.js && node test/cad.test.js && node test/export.test.js",
-    "setup": "python scripts/patch-acadts.py .",
-    "postinstall": "node scripts/postinstall.mjs"
+    "setup": "node scripts/patch-acadts.mjs",
+    "postinstall": "node scripts/patch-acadts.mjs"
   },
   "dependencies": {
     "@node-projects/acad-ts": "^3.8.0",

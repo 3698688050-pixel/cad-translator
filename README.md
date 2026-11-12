@@ -3,7 +3,7 @@
 中文图纸文字 → 英文，译完原地写回 DWG。词库优先，词库没有的术语交给 API，译完再问你要不要入库。
 
 ```bash
-npm install                  # postinstall 会尝试给 acad-ts 打 GBK 补丁（需 python，失败不影响安装）
+npm install                  # postinstall 自动给 acad-ts 打 GBK 补丁（纯 Node，无 python 依赖）
 DEEPSEEK_API_KEY=sk-... npm start
 # http://localhost:5177
 ```
@@ -69,7 +69,7 @@ node test/export.test.js      # 占位符写回 / 字宽锚点 / 压线 / 真实
 - `lib/export.js` `applyTranslations` / `fitToLines` / `gates`
 - `server.js` HTTP + 词库读写 + API 调用 + 上传/导出
 - `public/` 原生 JS 前端，无构建步骤
-- `scripts/patch-acadts.py` 修 acad-ts 的 GBK 编码（不打补丁时中文会写成 `?`）
+- `scripts/patch-acadts.mjs` 修 acad-ts 的 GBK 编码（不打补丁时中文会写成 `?`）
 
 ## 已知限制
 
@@ -77,6 +77,7 @@ node test/export.test.js      # 占位符写回 / 字宽锚点 / 压线 / 真实
 - 只有同一个库能回读自校，缺第三方独立校验器——导出的图请在 CAD 里开一次确认
 - 文字被炸成线条、或文字在未绑定的外部参照里，都读不到，页面会提示处置办法
 - `data/uploads/` 会一直留存上传的原图，不自动清理
+- DWG 按 GBK 存字，GBK 里没有的字符（`Ø`、`±`、部分符号）写回会变成 `?`；原文里本来就有的不受影响（旧图本来就存不了这些字符）
 
 ## 许可
 
@@ -87,8 +88,8 @@ node test/export.test.js      # 占位符写回 / 字宽锚点 / 压线 / 真实
 ```bash
 git clone https://github.com/3698688050-pixel/cad-translator.git
 cd cad-translator
-npm install      # 首次会尝试给 acad-ts 打 GBK 补丁，需 python3
+npm install      # 自动给 acad-ts 打 GBK 补丁（纯 Node，无额外依赖）
 DEEPSEEK_API_KEY=sk-... npm start
 ```
 
-没有 python 就在服务启动后手动跑 `npm run setup`；不打这个补丁，导出时中文会被写成 `?`（服务启动时会告警）。
+补丁没打上就手动跑 `npm run setup`（幂等）；不打补丁时导出会把中文写成 `?`，服务启动会告警。
