@@ -273,6 +273,8 @@ function serveStatic(res, urlPath) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
+  // One line per request: without it a browser-side failure is invisible from here.
+  res.on('finish', () => console.log(`${new Date().toISOString().slice(11, 19)} ${req.method} ${p} ${res.statusCode}`));
   try {
     if (p === '/api/state') {
       return json(res, 200, {

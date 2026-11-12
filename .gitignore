@@ -4,3 +4,4 @@ data/jobs/
 test/_*
 *.log
 .DS_Store
+bin/

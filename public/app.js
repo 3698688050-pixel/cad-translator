@@ -156,7 +156,7 @@ function renderRows() {
   el.empty.hidden = has;
   el.copyAll.disabled = !has;
   el.downloadCsv.disabled = !has;
-  el.exportDwg.disabled = !(has && cad?.canExport);
+  el.exportDwg.setAttribute('aria-disabled', String(!(has && cad?.canExport)));
 }
 
 function say(msg, kind = '') {
@@ -251,13 +251,22 @@ function downloadCsv() {
 
 /* ---------------- write back into the drawing ---------------- */
 
+function exportBlocker() {
+  if (!cad) return '上面还没导入 DWG 原图 —— 拖入 .dwg 文件，或点「导入 DWG」。贴在框里的文字只能翻译，不能写回图纸。';
+  if (!cad.canExport) return '这张是 DXF，只能翻译。写回请先在 CAD 里另存为 DWG，再导入这个 DWG。';
+  if (!cad.id) return '这个 DWG 里没读到文字，没有可写回的内容。检查文字是否在未绑定的外部参照里。';
+  if (!segments.length) return '先点「翻译」。译文出来后这个按钮才能把译文写回原图。';
+  return '';
+}
+
 async function exportDwg() {
-  if (!cad?.id) return say('先导入 DWG 原图，才能把译文写回去', 'warn');
+  const blocked = exportBlocker();
+  if (blocked) return say(blocked, 'warn');
   const map = {};
   for (const s of segments) if (s.src && s.out) map[s.src] = s.out;
   if (!Object.keys(map).length) return say('还没有译文可写回', 'warn');
 
-  el.exportDwg.disabled = true;
+  el.exportDwg.disabled = true; // real disabled only while the request is in flight
   say(`正在把 ${Object.keys(map).length} 条译文写回图纸并校验…`);
   try {
     const res = await fetch('/api/export', {
@@ -283,14 +292,20 @@ async function exportDwg() {
     if (g.newCollisions.length) bits.push(`⚠ ${g.newCollisions.length} 处文字新压线（${g.newCollisions[0].handle} 等）`);
     say(bits.join(' · '), g.ok && !g.newCollisions.length ? 'ok' : 'warn');
 
+    // WeChat / DingTalk / some mobile browsers silently drop a programmatic click,
+    // so the download is also offered as a real link.
     const a = document.createElement('a');
     a.href = res.download;
     a.download = res.name;
+    a.textContent = `↓ ${res.name}`;
+    a.className = 'dl';
     a.click();
+    el.notice.append(' ', a);
   } catch (err) {
     say(`导出失败：${err.message}`, 'warn');
   } finally {
-    el.exportDwg.disabled = !(segments.length && cad?.canExport);
+    el.exportDwg.disabled = false;
+    renderRows();
   }
 }
 
@@ -298,9 +313,6 @@ async function exportDwg() {
 
 el.source.addEventListener('input', () => {
   el.srcMeta.textContent = `${lineCount()} 行`;
-  // edited text no longer matches the uploaded drawing, so writing back would be guesswork
-  cad = null;
-  el.exportDwg.disabled = true;
 });
 el.source.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -333,7 +345,8 @@ $('#sourceFile').addEventListener('change', async (e) => {
   e.target.value = '';
 });
 
-async function loadSource(file) {  const name = file.name.toLowerCase();
+async function loadSource(file) {
+  const name = file.name.toLowerCase();
   try {
     if (name.endsWith('.dwg') || name.endsWith('.dxf')) {
       say(`正在从 ${file.name} 里读文字…`);
@@ -346,13 +359,16 @@ async function loadSource(file) {  const name = file.name.toLowerCase();
       if (res.errorText) return say(`${file.name}：${res.errorText}`, 'warn');
       el.source.value = res.lines.join('\n');
       el.srcMeta.textContent = `${lineCount()} 行`;
+      // Without this the export step has no drawing to write into.
+      cad = { id: res.id, name: file.name, canExport: Boolean(res.canExport) };
+      renderRows();
       const where = res.blocks ? `模型空间 ${res.model} 行 + 图块内 ${res.blocks} 行` : `${res.model} 行`;
       const extra = res.dropped ? `（超过 ${res.lines.length} 行的部分已截断）` : '';
-      const note = res.canExport ? '' : '；DXF 只做翻译，写回请在 CAD 里另存为 DWG 后导入';
+      const note = res.canExport ? '；点「翻译」，之后就能导出改好的 DWG' : '；DXF 只做翻译，写回请在 CAD 里另存为 DWG 后导入';
       return say(`已从 ${file.name} 读到 ${res.lines.length} 行去重文字：${where}，${res.tookMs} ms${extra}${note}`, 'ok');
     }
     cad = null;
-    el.exportDwg.disabled = true;
+    renderRows();
     el.source.value = await file.text();
     el.srcMeta.textContent = `${lineCount()} 行`;
     say(`已载入 ${file.name}`, 'ok');
