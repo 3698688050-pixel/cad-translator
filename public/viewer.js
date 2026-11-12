@@ -71,6 +71,18 @@ async function load() {
   if (!svg) return;
   // The server's own sizing attributes fight the viewBox we drive, so drop them.
   for (const a of ['width', 'height', 'style', 'preserveAspectRatio']) svg.removeAttribute(a);
+  // libredwg keeps the drawing's layer colours, and a dark layer colour is invisible on black.
+  // The preview only has to answer "is anything missing / is the text right": lines white, text yellow.
+  for (const el of svg.querySelectorAll('*')) {
+    const isText = el.tagName === 'text' || el.tagName === 'tspan';
+    if (el.hasAttribute('stroke') && el.getAttribute('stroke') !== 'none') {
+      if (isText) el.removeAttribute('stroke');
+      else el.setAttribute('stroke', '#fff');
+    }
+    if (el.hasAttribute('fill') && el.getAttribute('fill') !== 'none') {
+      el.setAttribute('fill', isText ? '#ffe14d' : '#fff');
+    }
+  }
   const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
   base = vb.length === 4 && vb.every((n) => Number.isFinite(n))
     ? { x: vb[0], y: vb[1], w: vb[2], h: vb[3] }
