@@ -429,7 +429,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`图译 running at http://localhost:${PORT}`);
   console.log(`词库: ${STORE} (${Object.keys(glossary).length} 条)`);
   if (!gbkPatched()) {

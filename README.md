@@ -38,6 +38,7 @@ Windows PowerShell：`$env:DEEPSEEK_API_KEY='sk-...'; npm start`。CMD：`set DE
 | `TRANSLATE_BASE_URL` | `https://api.deepseek.com` | 换成任何 OpenAI 兼容端点 |
 | `TRANSLATE_MODEL` | `deepseek-chat` | 模型名 |
 | `PORT` | `5177` | 端口 |
+| `HOST` | `127.0.0.1` | 设为 `0.0.0.0` 可让同一局域网内的手机访问 |
 | `GLOSSARY_FILE` | `data/glossary.json` | 词库落盘位置 |
 
 ## 词库格式
