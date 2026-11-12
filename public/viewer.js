@@ -10,7 +10,7 @@ const fit = document.querySelector('#fit');
 
 const params = new URLSearchParams(location.search);
 const id = params.get('id') || '';
-const hasEn = params.get('en') === '1';
+const hasEn = params.get('en') === '1' || params.get('which') === 'en';
 let which = hasEn ? 'en' : 'src';
 
 let svg = null;
@@ -71,17 +71,23 @@ async function load() {
   if (!svg) return;
   // The server's own sizing attributes fight the viewBox we drive, so drop them.
   for (const a of ['width', 'height', 'style', 'preserveAspectRatio']) svg.removeAttribute(a);
-  // libredwg keeps the drawing's layer colours, and a dark layer colour is invisible on black.
-  // The preview only has to answer "is anything missing / is the text right": lines white, text yellow.
+  // The preview only has to answer "is anything missing / is the text right": lines white, text
+  // yellow, nothing else. Layer colours and fills are dropped (a white-filled solid reads as a
+  // smear over the text), and hairlines are pinned to 1px — DWG strokes are 1 drawing unit wide,
+  // which at this zoom is a fraction of a pixel and looks like the line is missing.
+  // Block instances (<use>) are clones, so their own attributes miss CSS/DOM edits: the same
+  // rewrite on the <defs> source is what the clone inherits.
   for (const el of svg.querySelectorAll('*')) {
     const isText = el.tagName === 'text' || el.tagName === 'tspan';
-    if (el.hasAttribute('stroke') && el.getAttribute('stroke') !== 'none') {
-      if (isText) el.removeAttribute('stroke');
-      else el.setAttribute('stroke', '#fff');
+    if (isText) {
+      el.setAttribute('stroke', 'none');
+      el.setAttribute('fill', '#ffe14d');
+      continue;
     }
-    if (el.hasAttribute('fill') && el.getAttribute('fill') !== 'none') {
-      el.setAttribute('fill', isText ? '#ffe14d' : '#fff');
-    }
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#fff');
+    el.setAttribute('stroke-width', '1');
+    el.setAttribute('vector-effect', 'non-scaling-stroke');
   }
   const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
   base = vb.length === 4 && vb.every((n) => Number.isFinite(n))
