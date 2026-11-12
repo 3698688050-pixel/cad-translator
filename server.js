@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 import {
   parseGlossary, matchTerms, protect, restore, lostTokens, isFullyGlossary,
 } from './lib/core.js';
-import { extractDwg, extractDxf, openDwg, decodeDxf } from './lib/cad.js';
+import { extractDwg, extractDxf, openDwg, decodeDxf, decodeText } from './lib/cad.js';
 import { applyTranslations, gates, writeDwg } from './lib/export.js';
+import { dwgToSvg } from './lib/preview.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
@@ -295,7 +296,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/glossary/import' && req.method === 'POST') {
-      const text = await readBody(req, 8 * 1024 * 1024);
+      // Excel on a Chinese Windows saves CSV as GBK, not UTF-8; decode both.
+      const text = decodeText(await readBody(req, 8 * 1024 * 1024, null));
       const rows = parseGlossary(text);
       if (!rows.length) return json(res, 400, { error: '没解析出词条，检查是否为「中文,English」每行一条' });
       return json(res, 200, { ...upsert(rows), parsed: rows.length });
@@ -382,6 +384,8 @@ const server = http.createServer(async (req, res) => {
       const meta = JSON.parse(fs.readFileSync(path.join(UPLOADS, `${id}.json`), 'utf8'));
       const outName = `${meta.name.replace(/\.dwg$/i, '')}-EN.dwg`;
       fs.writeFileSync(path.join(UPLOADS, `${id}-EN.dwg`), bytes);
+      // The preview of the previous export would otherwise keep showing the old text.
+      fs.rmSync(path.join(UPLOADS, `${id}-EN.svg`), { force: true });
       const small = applied.log.filter((x) => x.hTo < x.hFrom * 0.7 - 0.01).length;
 
       return json(res, 200, {
@@ -396,6 +400,26 @@ const server = http.createServer(async (req, res) => {
         download: `/api/export/download?id=${id}`,
         tookMs: Date.now() - started,
       });
+    }
+
+    // The drawing itself, drawn in the browser. which=en is the rewritten file if it exists.
+    if (p === '/api/preview' && req.method === 'GET') {
+      const id = String(url.searchParams.get('id') || '').replace(/[^a-f0-9]/g, '');
+      const want = url.searchParams.get('which') === 'en' ? '-EN' : '';
+      const src = path.join(UPLOADS, `${id}${want}.dwg`);
+      if (!id || !fs.existsSync(src)) return json(res, 404, { error: '找不到图纸，请重新导入' });
+      const cache = path.join(UPLOADS, `${id}${want}.svg`);
+      let svg = fs.existsSync(cache) ? fs.readFileSync(cache, 'utf8') : null;
+      if (!svg) {
+        try {
+          svg = (await dwgToSvg(fs.readFileSync(src))).svg;
+        } catch (err) {
+          return json(res, 500, { error: `图形渲染失败：${err.message}` });
+        }
+        fs.writeFileSync(cache, svg);
+      }
+      res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-cache' });
+      return res.end(svg);
     }
 
     if (p === '/api/export/download' && req.method === 'GET') {

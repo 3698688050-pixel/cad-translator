@@ -19,6 +19,7 @@ Windows PowerShell：`$env:DEEPSEEK_API_KEY='sk-...'; npm start`。CMD：`set DE
 3. 词库命中的术语先替换成 `⟦n⟧` 占位符 → 模型看不到中文原文，物理上改不了词库译法；token 丢失则该行标红并重试一次
 4. 候选术语条一次性入库（你确认后才写入 `data/glossary.json`）
 5. 导出 DWG：只写回页面上的译文，改字高适配空间，跑三道校验后下载 `原名-EN.dwg`
+6. 「看图」：本机把 DWG 渲成 SVG 在浏览器里看（滚轮缩放、拖拽平移），导出后看的是英文版；不上传任何图到第三方
 
 ## 导出 DWG 的三道校验
 
@@ -43,7 +44,7 @@ Windows PowerShell：`$env:DEEPSEEK_API_KEY='sk-...'; npm start`。CMD：`set DE
 
 ## 词库格式
 
-CSV / TSV / 分号分隔都行，一行一对，可带表头（`中文,English`）：
+CSV / TSV / 分号分隔都行，一行一对，可带表头（`中文,English`）。编码 UTF-8 或 GBK 都认（Excel 在中文 Windows 上另存的 CSV 就是 GBK）：
 
 ```
 中文,English

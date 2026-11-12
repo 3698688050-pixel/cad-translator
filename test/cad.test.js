@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cleanCadText, extractDxf } from '../lib/cad.js';
+import { cleanCadText, extractDxf, decodeText } from '../lib/cad.js';
 
 // MTEXT control codes: \P = newline, formatting runs dropped, %%c = Ø, \U+XXXX = char
 assert.equal(cleanCadText('技术要求\\P未注倒角C1'), '技术要求\n未注倒角C1');
@@ -24,5 +24,11 @@ assert.deepEqual(got.lines, ['底板采用Q235钢板', '技术要求：', '去�
 
 // duplicates collapse: drawings repeat notes
 assert.deepEqual(extractDxf('0\nTEXT\n1\n底板\n0\nTEXT\n1\n底板\n').lines, ['底板']);
+
+// A glossary CSV saved by Excel on a Chinese Windows is GBK, not UTF-8.
+const gbkBytes = Buffer.from([0xb5, 0xd7, 0xb0, 0xe5]); // 底板 in GBK
+assert.equal(decodeText(gbkBytes), '\u5e95\u677f');
+assert.equal(decodeText(Buffer.from('\u5e95\u677f,base plate', 'utf8')), '\u5e95\u677f,base plate');
+assert.equal(decodeText(Buffer.from('\ufeff\u5e95\u677f,base plate', 'utf8')), '\u5e95\u677f,base plate');
 
 console.log('cad: all assertions passed');

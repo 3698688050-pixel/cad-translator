@@ -21,6 +21,7 @@ const el = {
   copyAll: $('#copyAll'),
   downloadCsv: $('#downloadCsv'),
   exportDwg: $('#exportDwg'),
+  viewDwg: $('#viewDwg'),
 };
 
 let segments = [];
@@ -157,6 +158,7 @@ function renderRows() {
   el.copyAll.disabled = !has;
   el.downloadCsv.disabled = !has;
   el.exportDwg.setAttribute('aria-disabled', String(!(has && cad?.canExport)));
+  el.viewDwg.disabled = !cad?.id;
 }
 
 function say(msg, kind = '') {
@@ -301,6 +303,8 @@ async function exportDwg() {
     a.className = 'dl';
     a.click();
     el.notice.append(' ', a);
+    cad.en = true;
+    renderRows();
   } catch (err) {
     say(`导出失败：${err.message}`, 'warn');
   } finally {
@@ -338,6 +342,10 @@ $('#sample').addEventListener('click', () => {
 });
 
 $('#pickSource').addEventListener('click', () => $('#sourceFile').click());
+$('#viewDwg').addEventListener('click', () => {
+  if (!cad?.id) return;
+  window.open(`/viewer.html?id=${cad.id}${cad.en ? '&en=1' : ''}`, '_blank');
+});
 $('#sourceFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -404,8 +412,9 @@ $('#glossaryFile').addEventListener('change', async (e) => {
 });
 
 async function importGlossary(file) {
-  const text = await file.text();
-  const res = await fetch('/api/glossary/import', { method: 'POST', body: text }).then((r) => r.json());
+  // Send the bytes, not file.text(): Excel on a Chinese Windows writes CSV as GBK, and the
+  // browser would turn that into mojibake before the server ever sees it.
+  const res = await fetch('/api/glossary/import', { method: 'POST', body: await file.arrayBuffer() }).then((r) => r.json());
   if (res.error) return say(res.error, 'warn');
   await Promise.all([refreshState(), loadTerms()]);
   say(`${file.name}：新增 ${res.added} 条，覆盖 ${res.updated} 条，现共 ${res.total} 条`, 'ok');
